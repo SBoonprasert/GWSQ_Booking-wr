@@ -1,5 +1,7 @@
 "use client"
 
+import { DialogFooter } from "@/components/ui/dialog"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +13,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -116,6 +117,61 @@ export default function AdminDashboard() {
       images: ["/placeholder.svg?height=200&width=300"],
       description: "Executive boardroom with premium amenities",
     },
+    {
+      id: "4",
+      name: "Training Room D",
+      type: "classroom",
+      capacity: 20,
+      price: 80,
+      status: "available",
+      amenities: ["WiFi", "Projector", "Whiteboard", "Microphone"],
+      images: ["/placeholder.svg?height=200&width=300"],
+      description: "Spacious training room perfect for workshops and seminars",
+    },
+    {
+      id: "5",
+      name: "Small Meeting Room E",
+      type: "meeting",
+      capacity: 4,
+      price: 50,
+      status: "maintenance",
+      amenities: ["WiFi", "TV"],
+      images: ["/placeholder.svg?height=200&width=300"],
+      description: "Intimate meeting space for small team discussions",
+    },
+    {
+      id: "6",
+      name: "Executive Suite F",
+      type: "boardroom",
+      capacity: 8,
+      price: 200,
+      status: "available",
+      amenities: ["WiFi", "Projector", "Coffee Machine", "Catering", "Video Conferencing"],
+      images: ["/placeholder.svg?height=200&width=300"],
+      description: "Premium executive suite with luxury amenities",
+    },
+    {
+      id: "7",
+      name: "Workshop Room G",
+      type: "classroom",
+      capacity: 25,
+      price: 90,
+      status: "available",
+      amenities: ["WiFi", "Projector", "Whiteboard", "Microphone", "TV"],
+      images: ["/placeholder.svg?height=200&width=300"],
+      description: "Large workshop space with multiple presentation options",
+    },
+    {
+      id: "8",
+      name: "Collaboration Hub H",
+      type: "meeting",
+      capacity: 8,
+      price: 70,
+      status: "available",
+      amenities: ["WiFi", "TV", "Whiteboard", "Coffee Machine"],
+      images: ["/placeholder.svg?height=200&width=300"],
+      description: "Modern collaboration space with flexible seating arrangements",
+    },
   ])
 
   const [bookings, setBookings] = useState<Booking[]>([
@@ -168,6 +224,28 @@ export default function AdminDashboard() {
   const [formError, setFormError] = useState("")
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
   const [customAmenity, setCustomAmenity] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [roomTypeFilter, setRoomTypeFilter] = useState("all")
+  const [isBookingRoom, setIsBookingRoom] = useState(false)
+  const [bookingForm, setBookingForm] = useState({
+    userName: "",
+    userEmail: "",
+    selectedRooms: [] as string[],
+    selectedTimeSlots: [] as string[],
+    bookingDate: new Date(),
+    topic: "",
+    notes: "",
+  })
+  const [availableTimeSlots] = useState([
+    "09:00 - 10:00",
+    "10:00 - 11:00",
+    "11:00 - 12:00",
+    "12:00 - 13:00",
+    "13:00 - 14:00",
+    "14:00 - 15:00",
+    "15:00 - 16:00",
+    "16:00 - 17:00",
+  ])
 
   // Check if user is admin on component mount
   useEffect(() => {
@@ -398,6 +476,22 @@ export default function AdminDashboard() {
     }))
   }
 
+  const filteredRooms = rooms.filter((room) => {
+    const matchesSearch =
+      room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      room.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      room.amenities.some((amenity) => amenity.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    const matchesType = roomTypeFilter === "all" || room.type === roomTypeFilter
+
+    return matchesSearch && matchesType
+  })
+
+  const getRoomTypes = () => {
+    const types = [...new Set(rooms.map((room) => room.type))]
+    return types
+  }
+
   const RoomForm = () => (
     <div className="space-y-4">
       {formError && (
@@ -518,6 +612,123 @@ export default function AdminDashboard() {
     </div>
   )
 
+  const handleAdminBooking = () => {
+    setIsBookingRoom(true)
+    setBookingForm({
+      userName: "",
+      userEmail: "",
+      selectedRooms: [],
+      selectedTimeSlots: [],
+      bookingDate: selectedDate || new Date(),
+      topic: "",
+      notes: "",
+    })
+  }
+
+  const handleRoomSelectionForBooking = (roomId: string, checked: boolean) => {
+    if (checked) {
+      setBookingForm((prev) => ({
+        ...prev,
+        selectedRooms: [...prev.selectedRooms, roomId],
+      }))
+    } else {
+      setBookingForm((prev) => ({
+        ...prev,
+        selectedRooms: prev.selectedRooms.filter((id) => id !== roomId),
+      }))
+    }
+  }
+
+  const handleTimeSlotSelectionForBooking = (timeSlot: string, checked: boolean) => {
+    if (checked) {
+      setBookingForm((prev) => ({
+        ...prev,
+        selectedTimeSlots: [...prev.selectedTimeSlots, timeSlot],
+      }))
+    } else {
+      setBookingForm((prev) => ({
+        ...prev,
+        selectedTimeSlots: prev.selectedTimeSlots.filter((slot) => slot !== timeSlot),
+      }))
+    }
+  }
+
+  const confirmAdminBooking = () => {
+    if (!bookingForm.userName.trim()) {
+      alert("Please enter a user name")
+      return
+    }
+    if (!bookingForm.userEmail.trim()) {
+      alert("Please enter a user email")
+      return
+    }
+    if (bookingForm.selectedRooms.length === 0) {
+      alert("Please select at least one room")
+      return
+    }
+    if (bookingForm.selectedTimeSlots.length === 0) {
+      alert("Please select at least one time slot")
+      return
+    }
+
+    const newBooking: Booking = {
+      id: `admin-booking-${Date.now()}`,
+      userId: `admin-${Date.now()}`,
+      userName: bookingForm.userName,
+      roomIds: bookingForm.selectedRooms,
+      roomNames: bookingForm.selectedRooms.map((roomId) => {
+        const room = rooms.find((r) => r.id === roomId)
+        return room ? room.name : "Unknown Room"
+      }),
+      date: bookingForm.bookingDate,
+      timeSlot:
+        bookingForm.selectedTimeSlots.length === 1
+          ? bookingForm.selectedTimeSlots[0]
+          : `${bookingForm.selectedTimeSlots[0].split(" - ")[0]} - ${bookingForm.selectedTimeSlots[bookingForm.selectedTimeSlots.length - 1].split(" - ")[1]}`,
+      status: "confirmed",
+    }
+
+    setBookings((prev) => [...prev, newBooking])
+    alert(
+      `Booking created successfully for ${bookingForm.userName}!\n\nRooms: ${newBooking.roomNames.join(", ")}\nTime: ${newBooking.timeSlot}\nDate: ${format(bookingForm.bookingDate, "MMM dd, yyyy")}`,
+    )
+    setIsBookingRoom(false)
+    resetBookingForm()
+  }
+
+  const resetBookingForm = () => {
+    setBookingForm({
+      userName: "",
+      userEmail: "",
+      selectedRooms: [],
+      selectedTimeSlots: [],
+      bookingDate: new Date(),
+      topic: "",
+      notes: "",
+    })
+  }
+
+  const cancelAdminBooking = () => {
+    setIsBookingRoom(false)
+    resetBookingForm()
+  }
+
+  const getAvailableRoomsForBooking = () => {
+    return rooms.filter((room) => room.status !== "maintenance")
+  }
+
+  const isTimeSlotAvailable = (timeSlot: string, roomId: string) => {
+    return !bookings.some(
+      (booking) =>
+        booking.roomIds.includes(roomId) &&
+        booking.date.toDateString() === bookingForm.bookingDate.toDateString() &&
+        (booking.timeSlot === timeSlot ||
+          (booking.timeSlot.includes(" - ") &&
+            timeSlot >= booking.timeSlot.split(" - ")[0] &&
+            timeSlot <= booking.timeSlot.split(" - ")[1])),
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
@@ -553,7 +764,7 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="rooms" className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <h2 className="text-xl font-semibold">Room Management</h2>
               <Dialog open={isAddingRoom} onOpenChange={setIsAddingRoom}>
                 <DialogTrigger asChild>
@@ -578,51 +789,150 @@ export default function AdminDashboard() {
               </Dialog>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {rooms.map((room) => (
-                <Card key={room.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{room.name}</CardTitle>
-                      <Badge className={getStatusColor(room.status)}>{room.status}</Badge>
-                    </div>
-                    <CardDescription>
-                      {room.type} • {room.capacity} people • ${room.price}/hour
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <img
-                        src={room.images[0] || "/placeholder.svg"}
-                        alt={room.name}
-                        className="w-full h-32 object-cover rounded-md"
-                      />
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{room.description}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {room.amenities.map((amenity) => (
-                          <Badge key={amenity} variant="secondary" className="text-xs">
-                            {amenity}
-                          </Badge>
+            {/* Search and Filter Controls */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="search-rooms">Search Rooms</Label>
+                    <Input
+                      id="search-rooms"
+                      placeholder="Search by name, description, or amenities..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="sm:w-48">
+                    <Label htmlFor="filter-type">Filter by Type</Label>
+                    <Select value={roomTypeFilter} onValueChange={setRoomTypeFilter}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {getRoomTypes().map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </SelectItem>
                         ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEditRoom(room)}>
-                          <Edit className="w-3 h-3 mr-1" />
-                          Edit
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Results Summary */}
+                <div className="mt-4 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                  <span>
+                    Showing {filteredRooms.length} of {rooms.length} room{rooms.length !== 1 ? "s" : ""}
+                  </span>
+                  {(searchTerm || roomTypeFilter !== "all") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSearchTerm("")
+                        setRoomTypeFilter("all")
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Room Cards with Scrollable Container */}
+            <div className="relative">
+              {filteredRooms.length > 0 ? (
+                <div className="max-h-[600px] overflow-y-auto pr-2 space-y-4">
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredRooms.map((room) => (
+                      <Card key={room.id} className="h-fit">
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">{room.name}</CardTitle>
+                            <Badge className={getStatusColor(room.status)}>{room.status}</Badge>
+                          </div>
+                          <CardDescription>
+                            {room.type} • {room.capacity} people • ${room.price}/hour
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <img
+                              src={room.images[0] || "/placeholder.svg"}
+                              alt={room.name}
+                              className="w-full h-32 object-cover rounded-md"
+                            />
+                            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{room.description}</p>
+                            <div className="flex flex-wrap gap-1">
+                              {room.amenities.slice(0, 3).map((amenity) => (
+                                <Badge key={amenity} variant="secondary" className="text-xs">
+                                  {amenity}
+                                </Badge>
+                              ))}
+                              {room.amenities.length > 3 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{room.amenities.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleEditRoom(room)}>
+                                <Edit className="w-3 h-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleViewRoom(room.id)}>
+                                <Eye className="w-3 h-3 mr-1" />
+                                View
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => handleDeleteRoom(room.id)}>
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Scroll Indicator */}
+                  {filteredRooms.length > 6 && (
+                    <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+                      Scroll to see more rooms
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="py-12">
+                    <div className="text-center text-gray-500 dark:text-gray-400">
+                      <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <h3 className="font-medium mb-2">No rooms found</h3>
+                      <p className="text-sm">
+                        {searchTerm || roomTypeFilter !== "all"
+                          ? "Try adjusting your search or filter criteria"
+                          : "Get started by adding your first room"}
+                      </p>
+                      {(searchTerm || roomTypeFilter !== "all") && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-4"
+                          onClick={() => {
+                            setSearchTerm("")
+                            setRoomTypeFilter("all")
+                          }}
+                        >
+                          Clear Filters
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleViewRoom(room.id)}>
-                          <Eye className="w-3 h-3 mr-1" />
-                          View
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDeleteRoom(room.id)}>
-                          <Trash2 className="w-3 h-3 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
 
             {/* Edit Room Dialog */}
@@ -761,36 +1071,70 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="schedule" className="space-y-6">
-            <div className="grid lg:grid-cols-4 gap-6">
-              {/* Calendar Section */}
-              <Card className="lg:col-span-1">
+            <div className="grid lg:grid-cols-5 gap-6">
+              {/* Calendar Section - Increased from 1 to 2 columns */}
+              <Card className="lg:col-span-2">
                 <CardHeader>
-                  <CardTitle>Calendar</CardTitle>
-                  <CardDescription>Select a date to view room schedule</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Calendar</CardTitle>
+                      <CardDescription>Select a date to view room schedule</CardDescription>
+                    </div>
+                    <Button
+                      onClick={handleAdminBooking}
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Book Room
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <style jsx>{`
-                    .calendar-with-dots .rdp-day_button {
-                      position: relative;
-                    }
-                    .calendar-with-dots .has-booking::after {
-                      content: '';
-                      position: absolute;
-                      bottom: 2px;
-                      left: 50%;
-                      transform: translateX(-50%);
-                      width: 4px;
-                      height: 4px;
-                      background-color: #ef4444;
-                      border-radius: 50%;
-                    }
-                  `}</style>
+          .calendar-with-dots .rdp-day_button {
+            position: relative;
+          }
+          .calendar-with-dots .has-booking::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background-color: #ef4444;
+            border-radius: 50%;
+          }
+          .calendar-with-dots .rdp {
+            margin: 0;
+          }
+          .calendar-with-dots .rdp-months {
+            justify-content: center;
+          }
+          .calendar-with-dots .rdp-month {
+            width: 100%;
+          }
+          .calendar-with-dots .rdp-table {
+            width: 100%;
+            max-width: none;
+          }
+          .calendar-with-dots .rdp-day {
+            width: 40px;
+            height: 40px;
+          }
+          .calendar-with-dots .rdp-day_button {
+            width: 36px;
+            height: 36px;
+            font-size: 14px;
+          }
+        `}</style>
                   <div className="calendar-with-dots">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
                       onSelect={setSelectedDate}
-                      className="rounded-md border"
+                      className="rounded-md border w-full"
                       modifiers={{
                         booked: (date) => getDaysWithBookings().has(date.toDateString()),
                       }}
@@ -807,11 +1151,120 @@ export default function AdminDashboard() {
                       <span>Days with bookings</span>
                     </div>
                   </div>
+
+                  {/* Today's Bookings Summary - Moved here for better space utilization */}
+                  <div className="mt-6 pt-4 border-t">
+                    <h3 className="font-medium text-sm mb-3">
+                      {selectedDate ? format(selectedDate, "MMM d") : "Today"}'s Bookings
+                    </h3>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                      {getBookingsForDate().length} booking{getBookingsForDate().length !== 1 ? "s" : ""} scheduled
+                    </div>
+                    {getBookingsForDate().length > 0 ? (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {getBookingsForDate().map((booking) => (
+                          <div
+                            key={booking.id}
+                            className="p-2 border rounded-lg dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <h4 className="font-medium text-xs truncate" title={booking.userName}>
+                                {booking.userName}
+                              </h4>
+                              <Badge className={getStatusColor(booking.status)} variant="secondary">
+                                <span className="text-xs">{booking.status}</span>
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">{booking.timeSlot}</p>
+                            <p
+                              className="text-xs text-gray-500 dark:text-gray-500 truncate"
+                              title={booking.roomNames.join(", ")}
+                            >
+                              {booking.roomNames.join(", ")}
+                            </p>
+                            <div className="flex gap-1 mt-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditBooking(booking.id)}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleOverrideBooking(booking)}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                        <CalendarIcon className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                        <p className="text-xs">No bookings for this date</p>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Bookings Summary */}
-              <Card className="lg:col-span-1">
+              {/* Room Timetable - Reduced from 2 to 3 columns */}
+              <div className="lg:col-span-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Room Timetable</CardTitle>
+                    <CardDescription>
+                      Room availability for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "today"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <RoomTimetable
+                      date={selectedDate || new Date()}
+                      rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
+                      timeSlots={generateTimetableData()}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Mobile Layout - Stack vertically on smaller screens */}
+            <div className="lg:hidden space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Calendar</CardTitle>
+                  <CardDescription>Select a date to view room schedule</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="calendar-with-dots">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      className="rounded-md border w-full mx-auto"
+                      modifiers={{
+                        booked: (date) => getDaysWithBookings().has(date.toDateString()),
+                      }}
+                      modifiersClassNames={{
+                        booked: "has-booking",
+                      }}
+                    />
+                  </div>
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span>Days with bookings</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
                 <CardHeader>
                   <CardTitle>{selectedDate ? format(selectedDate, "MMM d") : "Today"}'s Bookings</CardTitle>
                   <CardDescription>
@@ -854,28 +1307,227 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
 
-              {/* Room Timetable */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Room Timetable</CardTitle>
-                    <CardDescription>
-                      Room availability for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "today"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <RoomTimetable
-                      date={selectedDate || new Date()}
-                      rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
-                      timeSlots={generateTimetableData()}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Room Timetable</CardTitle>
+                  <CardDescription>
+                    Room availability for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "today"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <RoomTimetable
+                    date={selectedDate || new Date()}
+                    rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
+                    timeSlots={generateTimetableData()}
+                  />
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
       </div>
+      {/* Admin Booking Dialog */}
+      <Dialog open={isBookingRoom} onOpenChange={setIsBookingRoom}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-purple-600 rounded-full"></div>
+              Admin Booking - Unlimited Access
+            </DialogTitle>
+            <DialogDescription>
+              As an admin, you can book multiple rooms for any duration without restrictions
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* User Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="booking-user-name">User Name*</Label>
+                <Input
+                  id="booking-user-name"
+                  value={bookingForm.userName}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, userName: e.target.value }))}
+                  placeholder="Enter user name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="booking-user-email">User Email*</Label>
+                <Input
+                  id="booking-user-email"
+                  type="email"
+                  value={bookingForm.userEmail}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, userEmail: e.target.value }))}
+                  placeholder="user@example.com"
+                />
+              </div>
+            </div>
+
+            {/* Booking Date */}
+            <div>
+              <Label>Booking Date*</Label>
+              <div className="mt-2">
+                <Calendar
+                  mode="single"
+                  selected={bookingForm.bookingDate}
+                  onSelect={(date) => date && setBookingForm((prev) => ({ ...prev, bookingDate: date }))}
+                  disabled={(date) => date < new Date()}
+                  className="rounded-md border w-fit"
+                />
+              </div>
+            </div>
+
+            {/* Room Selection */}
+            <div>
+              <Label className="text-base font-medium">Select Rooms (Unlimited)*</Label>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Admin privilege: Select any number of available rooms
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto border rounded-lg p-4">
+                {getAvailableRoomsForBooking().map((room) => (
+                  <div
+                    key={room.id}
+                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    <Checkbox
+                      id={`admin-room-${room.id}`}
+                      checked={bookingForm.selectedRooms.includes(room.id)}
+                      onCheckedChange={(checked) => handleRoomSelectionForBooking(room.id, checked as boolean)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <Label htmlFor={`admin-room-${room.id}`} className="cursor-pointer">
+                        <div className="font-medium text-sm">{room.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {room.type} • {room.capacity} people
+                        </div>
+                      </Label>
+                    </div>
+                    <Badge className={getStatusColor(room.status)} variant="secondary">
+                      {room.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              {bookingForm.selectedRooms.length > 0 && (
+                <div className="mt-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <p className="text-sm text-purple-800 dark:text-purple-300">
+                    Selected: {bookingForm.selectedRooms.length} room{bookingForm.selectedRooms.length > 1 ? "s" : ""}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Time Slot Selection */}
+            <div>
+              <Label className="text-base font-medium">Select Time Slots (Unlimited)*</Label>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Admin privilege: Select any combination of time slots
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {availableTimeSlots.map((timeSlot) => {
+                  const hasConflict = bookingForm.selectedRooms.some((roomId) => !isTimeSlotAvailable(timeSlot, roomId))
+
+                  return (
+                    <div key={timeSlot} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`admin-time-${timeSlot}`}
+                        checked={bookingForm.selectedTimeSlots.includes(timeSlot)}
+                        onCheckedChange={(checked) => handleTimeSlotSelectionForBooking(timeSlot, checked as boolean)}
+                      />
+                      <Label
+                        htmlFor={`admin-time-${timeSlot}`}
+                        className={`cursor-pointer text-sm ${hasConflict ? "text-orange-600 dark:text-orange-400" : ""}`}
+                      >
+                        {timeSlot}
+                        {hasConflict && <span className="ml-1 text-xs">(Conflict)</span>}
+                      </Label>
+                    </div>
+                  )
+                })}
+              </div>
+              {bookingForm.selectedTimeSlots.length > 0 && (
+                <div className="mt-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <p className="text-sm text-purple-800 dark:text-purple-300">
+                    Selected: {bookingForm.selectedTimeSlots.length} time slot
+                    {bookingForm.selectedTimeSlots.length > 1 ? "s" : ""}
+                    {bookingForm.selectedTimeSlots.length > 1 && (
+                      <span className="ml-2">
+                        ({bookingForm.selectedTimeSlots[0].split(" - ")[0]} -{" "}
+                        {bookingForm.selectedTimeSlots[bookingForm.selectedTimeSlots.length - 1].split(" - ")[1]})
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Additional Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="booking-topic">Meeting Topic</Label>
+                <Input
+                  id="booking-topic"
+                  value={bookingForm.topic}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, topic: e.target.value }))}
+                  placeholder="Meeting topic or purpose"
+                />
+              </div>
+              <div>
+                <Label htmlFor="booking-notes">Additional Notes</Label>
+                <Input
+                  id="booking-notes"
+                  value={bookingForm.notes}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Special requirements or notes"
+                />
+              </div>
+            </div>
+
+            {/* Booking Summary */}
+            {(bookingForm.selectedRooms.length > 0 || bookingForm.selectedTimeSlots.length > 0) && (
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h4 className="font-medium mb-2">Booking Summary</h4>
+                <div className="space-y-1 text-sm">
+                  <p>
+                    <strong>Date:</strong> {format(bookingForm.bookingDate, "MMMM d, yyyy")}
+                  </p>
+                  {bookingForm.selectedRooms.length > 0 && (
+                    <p>
+                      <strong>Rooms:</strong>{" "}
+                      {bookingForm.selectedRooms
+                        .map((roomId) => {
+                          const room = rooms.find((r) => r.id === roomId)
+                          return room ? room.name : "Unknown"
+                        })
+                        .join(", ")}
+                    </p>
+                  )}
+                  {bookingForm.selectedTimeSlots.length > 0 && (
+                    <p>
+                      <strong>Time:</strong>{" "}
+                      {bookingForm.selectedTimeSlots.length === 1
+                        ? bookingForm.selectedTimeSlots[0]
+                        : `${bookingForm.selectedTimeSlots[0].split(" - ")[0]} - ${bookingForm.selectedTimeSlots[bookingForm.selectedTimeSlots.length - 1].split(" - ")[1]} (${bookingForm.selectedTimeSlots.length} slots)`}
+                    </p>
+                  )}
+                  <p className="text-purple-600 dark:text-purple-400 font-medium">
+                    <strong>Admin Booking:</strong> No restrictions applied
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={cancelAdminBooking}>
+              Cancel
+            </Button>
+            <Button onClick={confirmAdminBooking} className="bg-purple-600 hover:bg-purple-700 text-white">
+              Create Booking
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
