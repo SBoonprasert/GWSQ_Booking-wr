@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,9 +19,30 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
-import { Plus, Edit, Trash2, CalendarIcon, Settings, Eye, AlertTriangle, X } from "lucide-react"
+import {
+  Plus,
+  Edit,
+  Trash2,
+  CalendarIcon,
+  Settings,
+  Eye,
+  AlertTriangle,
+  X,
+  LogOut,
+  Wifi,
+  Tv,
+  Video,
+  Coffee,
+  Presentation,
+  Mic,
+  PenTool,
+  PlusIcon,
+} from "lucide-react"
 import { format } from "date-fns"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useRouter } from "next/navigation"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface Room {
   id: string
@@ -46,7 +67,20 @@ interface Booking {
   status: "confirmed" | "pending" | "cancelled"
 }
 
+// Available amenities with their icons
+const availableAmenities = [
+  { id: "wifi", name: "WiFi", icon: <Wifi className="w-4 h-4" /> },
+  { id: "projector", name: "Projector", icon: <Presentation className="w-4 h-4" /> },
+  { id: "whiteboard", name: "Whiteboard", icon: <PenTool className="w-4 h-4" /> },
+  { id: "videoConf", name: "Video Conferencing", icon: <Video className="w-4 h-4" /> },
+  { id: "tv", name: "TV", icon: <Tv className="w-4 h-4" /> },
+  { id: "coffee", name: "Coffee Machine", icon: <Coffee className="w-4 h-4" /> },
+  { id: "mic", name: "Microphone", icon: <Mic className="w-4 h-4" /> },
+  { id: "catering", name: "Catering", icon: <Coffee className="w-4 h-4" /> },
+]
+
 export default function AdminDashboard() {
+  const router = useRouter()
   const [rooms, setRooms] = useState<Room[]>([
     {
       id: "1",
@@ -130,8 +164,48 @@ export default function AdminDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [isOverridingBooking, setIsOverridingBooking] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [formError, setFormError] = useState("")
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
+  const [customAmenity, setCustomAmenity] = useState("")
+
+  // Check if user is admin on component mount
+  useEffect(() => {
+    const userType = localStorage.getItem("userType")
+    if (userType !== "admin") {
+      router.push("/login")
+    }
+  }, [router])
+
+  const handleLogout = () => {
+    localStorage.removeItem("userType")
+    localStorage.removeItem("userName")
+    router.push("/login")
+  }
+
+  const validateRoomForm = () => {
+    if (!currentRoom.name || currentRoom.name.trim() === "") {
+      setFormError("Room name is required")
+      return false
+    }
+    if (!currentRoom.type) {
+      setFormError("Room type is required")
+      return false
+    }
+    if (!currentRoom.capacity || currentRoom.capacity < 1) {
+      setFormError("Capacity must be at least 1")
+      return false
+    }
+    if (!currentRoom.price || currentRoom.price < 0) {
+      setFormError("Price cannot be negative")
+      return false
+    }
+    setFormError("")
+    return true
+  }
 
   const handleAddRoom = () => {
+    if (!validateRoomForm()) return
+
     const room: Room = {
       id: Date.now().toString(),
       name: currentRoom.name || "",
@@ -139,31 +213,35 @@ export default function AdminDashboard() {
       capacity: currentRoom.capacity || 1,
       price: currentRoom.price || 0,
       status: (currentRoom.status as "available" | "occupied" | "maintenance") || "available",
-      amenities: currentRoom.amenities || [],
+      amenities: selectedAmenities,
       images: ["/placeholder.svg?height=200&width=300"],
       description: currentRoom.description || "",
     }
     setRooms([...rooms, room])
-    setCurrentRoom({
-      name: "",
-      type: "",
-      capacity: 1,
-      price: 0,
-      status: "available",
-      amenities: [],
-      description: "",
-    })
+    resetRoomForm()
     setIsAddingRoom(false)
   }
 
   const handleEditRoom = (room: Room) => {
     setCurrentRoom(room)
+    setSelectedAmenities(room.amenities || [])
     setIsEditingRoom(true)
   }
 
   const saveEditedRoom = () => {
-    setRooms(rooms.map((room) => (room.id === currentRoom.id ? ({ ...room, ...currentRoom } as Room) : room)))
+    if (!validateRoomForm()) return
+
+    const updatedRoom = {
+      ...currentRoom,
+      amenities: selectedAmenities,
+    } as Room
+
+    setRooms(rooms.map((room) => (room.id === currentRoom.id ? updatedRoom : room)))
+    resetRoomForm()
     setIsEditingRoom(false)
+  }
+
+  const resetRoomForm = () => {
     setCurrentRoom({
       name: "",
       type: "",
@@ -173,10 +251,31 @@ export default function AdminDashboard() {
       amenities: [],
       description: "",
     })
+    setSelectedAmenities([])
+    setCustomAmenity("")
+    setFormError("")
   }
 
   const handleDeleteRoom = (roomId: string) => {
-    setRooms(rooms.filter((room) => room.id !== roomId))
+    if (confirm("Are you sure you want to delete this room? This action cannot be undone.")) {
+      setRooms(rooms.filter((room) => room.id !== roomId))
+    }
+  }
+
+  const handleViewRoom = (roomId: string) => {
+    const room = rooms.find((r) => r.id === roomId)
+    if (room) {
+      alert(
+        `Room Details:\n\nName: ${room.name}\nType: ${room.type}\nCapacity: ${room.capacity}\nPrice: $${room.price}/hour\nStatus: ${room.status}\nAmenities: ${room.amenities.join(", ")}\nDescription: ${room.description}`,
+      )
+    }
+  }
+
+  const handleEditBooking = (bookingId: string) => {
+    const booking = bookings.find((b) => b.id === bookingId)
+    if (booking) {
+      alert(`Edit booking functionality would open here for booking: ${booking.id}`)
+    }
   }
 
   const handleOverrideBooking = (booking: Booking) => {
@@ -185,28 +284,56 @@ export default function AdminDashboard() {
   }
 
   const confirmOverride = () => {
-    // In a real app, this would update the booking in the database
-    setBookings(bookings.filter((b) => b.id !== selectedBooking?.id))
+    if (selectedBooking) {
+      setBookings(bookings.filter((b) => b.id !== selectedBooking.id))
+      alert(`Booking ${selectedBooking.id} has been cancelled and the user has been notified.`)
+    }
     setIsOverridingBooking(false)
     setSelectedBooking(null)
+  }
+
+  const cancelOverride = () => {
+    setIsOverridingBooking(false)
+    setSelectedBooking(null)
+  }
+
+  const cancelAddRoom = () => {
+    resetRoomForm()
+    setIsAddingRoom(false)
+  }
+
+  const cancelEditRoom = () => {
+    resetRoomForm()
+    setIsEditingRoom(false)
+  }
+
+  const toggleAmenity = (amenity: string) => {
+    setSelectedAmenities((prev) => (prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]))
+  }
+
+  const addCustomAmenity = () => {
+    if (customAmenity && customAmenity.trim() !== "" && !selectedAmenities.includes(customAmenity)) {
+      setSelectedAmenities((prev) => [...prev, customAmenity])
+      setCustomAmenity("")
+    }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "available":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
       case "occupied":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
       case "maintenance":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
       case "confirmed":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
       case "pending":
-        return "bg-orange-100 text-orange-800"
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
       case "cancelled":
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
     }
   }
 
@@ -214,6 +341,126 @@ export default function AdminDashboard() {
     if (!selectedDate) return []
     return bookings.filter((booking) => booking.date.toDateString() === selectedDate.toDateString())
   }
+
+  const RoomForm = () => (
+    <div className="space-y-4">
+      {formError && (
+        <Alert variant="destructive">
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      )}
+      <div>
+        <Label htmlFor="room-name">Room Name*</Label>
+        <Input
+          id="room-name"
+          value={currentRoom.name}
+          onChange={(e) => setCurrentRoom({ ...currentRoom, name: e.target.value })}
+          placeholder="Conference Room A"
+        />
+      </div>
+      <div>
+        <Label htmlFor="room-type">Room Type*</Label>
+        <Select value={currentRoom.type} onValueChange={(value) => setCurrentRoom({ ...currentRoom, type: value })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select room type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="conference">Conference Room</SelectItem>
+            <SelectItem value="meeting">Meeting Room</SelectItem>
+            <SelectItem value="boardroom">Boardroom</SelectItem>
+            <SelectItem value="classroom">Classroom</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="capacity">Capacity*</Label>
+        <Input
+          id="capacity"
+          type="number"
+          value={currentRoom.capacity}
+          onChange={(e) => setCurrentRoom({ ...currentRoom, capacity: Number.parseInt(e.target.value) || 1 })}
+          min="1"
+        />
+      </div>
+      <div>
+        <Label htmlFor="price">Price per Hour ($)*</Label>
+        <Input
+          id="price"
+          type="number"
+          value={currentRoom.price}
+          onChange={(e) => setCurrentRoom({ ...currentRoom, price: Number.parseInt(e.target.value) || 0 })}
+          min="0"
+        />
+      </div>
+      <div>
+        <Label htmlFor="status">Status*</Label>
+        <Select
+          value={currentRoom.status}
+          onValueChange={(value: "available" | "occupied" | "maintenance") =>
+            setCurrentRoom({ ...currentRoom, status: value })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="available">Available</SelectItem>
+            <SelectItem value="occupied">Occupied</SelectItem>
+            <SelectItem value="maintenance">Maintenance</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>Amenities</Label>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {availableAmenities.map((amenity) => (
+            <div key={amenity.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={`amenity-${amenity.id}`}
+                checked={selectedAmenities.includes(amenity.name)}
+                onCheckedChange={() => toggleAmenity(amenity.name)}
+              />
+              <Label htmlFor={`amenity-${amenity.id}`} className="flex items-center gap-1 cursor-pointer">
+                {amenity.icon} {amenity.name}
+              </Label>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-3">
+          <Input
+            placeholder="Add custom amenity"
+            value={customAmenity}
+            onChange={(e) => setCustomAmenity(e.target.value)}
+            className="flex-1"
+          />
+          <Button type="button" size="sm" onClick={addCustomAmenity}>
+            <PlusIcon className="w-4 h-4" />
+          </Button>
+        </div>
+        {selectedAmenities.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {selectedAmenities.map((amenity) => (
+              <Badge key={amenity} variant="secondary" className="flex items-center gap-1">
+                {amenity}
+                <Button variant="ghost" size="sm" className="h-4 w-4 p-0 ml-1" onClick={() => toggleAmenity(amenity)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={currentRoom.description}
+          onChange={(e) => setCurrentRoom({ ...currentRoom, description: e.target.value })}
+          placeholder="Room description..."
+        />
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -223,7 +470,10 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Dashboard</h1>
             <div className="flex items-center gap-3">
               <ThemeToggle />
-              <Button variant="outline">Logout</Button>
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>
@@ -261,65 +511,9 @@ export default function AdminDashboard() {
                     <DialogTitle>Add New Room</DialogTitle>
                     <DialogDescription>Configure a new room for booking</DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="room-name">Room Name</Label>
-                      <Input
-                        id="room-name"
-                        value={currentRoom.name}
-                        onChange={(e) => setCurrentRoom({ ...currentRoom, name: e.target.value })}
-                        placeholder="Conference Room A"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="room-type">Room Type</Label>
-                      <Select
-                        value={currentRoom.type}
-                        onValueChange={(value) => setCurrentRoom({ ...currentRoom, type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select room type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="conference">Conference Room</SelectItem>
-                          <SelectItem value="meeting">Meeting Room</SelectItem>
-                          <SelectItem value="boardroom">Boardroom</SelectItem>
-                          <SelectItem value="classroom">Classroom</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="capacity">Capacity</Label>
-                      <Input
-                        id="capacity"
-                        type="number"
-                        value={currentRoom.capacity}
-                        onChange={(e) => setCurrentRoom({ ...currentRoom, capacity: Number.parseInt(e.target.value) })}
-                        min="1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="price">Price per Hour ($)</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        value={currentRoom.price}
-                        onChange={(e) => setCurrentRoom({ ...currentRoom, price: Number.parseInt(e.target.value) })}
-                        min="0"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={currentRoom.description}
-                        onChange={(e) => setCurrentRoom({ ...currentRoom, description: e.target.value })}
-                        placeholder="Room description..."
-                      />
-                    </div>
-                  </div>
+                  <RoomForm />
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddingRoom(false)}>
+                    <Button variant="outline" onClick={cancelAddRoom}>
                       Cancel
                     </Button>
                     <Button onClick={handleAddRoom}>Add Room</Button>
@@ -347,7 +541,7 @@ export default function AdminDashboard() {
                         alt={room.name}
                         className="w-full h-32 object-cover rounded-md"
                       />
-                      <p className="text-sm text-gray-600">{room.description}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{room.description}</p>
                       <div className="flex flex-wrap gap-1">
                         {room.amenities.map((amenity) => (
                           <Badge key={amenity} variant="secondary" className="text-xs">
@@ -360,7 +554,7 @@ export default function AdminDashboard() {
                           <Edit className="w-3 h-3 mr-1" />
                           Edit
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleViewRoom(room.id)}>
                           <Eye className="w-3 h-3 mr-1" />
                           View
                         </Button>
@@ -382,81 +576,9 @@ export default function AdminDashboard() {
                   <DialogTitle>Edit Room</DialogTitle>
                   <DialogDescription>Update room details</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="edit-room-name">Room Name</Label>
-                    <Input
-                      id="edit-room-name"
-                      value={currentRoom.name}
-                      onChange={(e) => setCurrentRoom({ ...currentRoom, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-room-type">Room Type</Label>
-                    <Select
-                      value={currentRoom.type}
-                      onValueChange={(value) => setCurrentRoom({ ...currentRoom, type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select room type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="conference">Conference Room</SelectItem>
-                        <SelectItem value="meeting">Meeting Room</SelectItem>
-                        <SelectItem value="boardroom">Boardroom</SelectItem>
-                        <SelectItem value="classroom">Classroom</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-capacity">Capacity</Label>
-                    <Input
-                      id="edit-capacity"
-                      type="number"
-                      value={currentRoom.capacity}
-                      onChange={(e) => setCurrentRoom({ ...currentRoom, capacity: Number.parseInt(e.target.value) })}
-                      min="1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-price">Price per Hour ($)</Label>
-                    <Input
-                      id="edit-price"
-                      type="number"
-                      value={currentRoom.price}
-                      onChange={(e) => setCurrentRoom({ ...currentRoom, price: Number.parseInt(e.target.value) })}
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-status">Status</Label>
-                    <Select
-                      value={currentRoom.status}
-                      onValueChange={(value: "available" | "occupied" | "maintenance") =>
-                        setCurrentRoom({ ...currentRoom, status: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="available">Available</SelectItem>
-                        <SelectItem value="occupied">Occupied</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-description">Description</Label>
-                    <Textarea
-                      id="edit-description"
-                      value={currentRoom.description}
-                      onChange={(e) => setCurrentRoom({ ...currentRoom, description: e.target.value })}
-                    />
-                  </div>
-                </div>
+                <RoomForm />
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsEditingRoom(false)}>
+                  <Button variant="outline" onClick={cancelEditRoom}>
                     Cancel
                   </Button>
                   <Button onClick={saveEditedRoom}>Save Changes</Button>
@@ -477,18 +599,30 @@ export default function AdminDashboard() {
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse">
                         <thead>
-                          <tr className="bg-gray-50">
-                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">User</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Room(s)</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Date</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Time</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Status</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Actions</th>
+                          <tr className="bg-gray-50 dark:bg-gray-800">
+                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
+                              User
+                            </th>
+                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
+                              Room(s)
+                            </th>
+                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
+                              Date
+                            </th>
+                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
+                              Time
+                            </th>
+                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
+                              Status
+                            </th>
+                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
+                              Actions
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {bookings.map((booking) => (
-                            <tr key={booking.id} className="border-t">
+                            <tr key={booking.id} className="border-t border-gray-200 dark:border-gray-700">
                               <td className="px-4 py-4">{booking.userName}</td>
                               <td className="px-4 py-4">{booking.roomNames.join(", ")}</td>
                               <td className="px-4 py-4">{format(booking.date, "MMM dd, yyyy")}</td>
@@ -498,7 +632,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-4">
                                 <div className="flex gap-2">
-                                  <Button size="sm" variant="outline">
+                                  <Button size="sm" variant="outline" onClick={() => handleEditBooking(booking.id)}>
                                     <Edit className="w-3 h-3 mr-1" />
                                     Edit
                                   </Button>
@@ -518,7 +652,7 @@ export default function AdminDashboard() {
                       </table>
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">No bookings found</div>
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No bookings found</div>
                   )}
                 </div>
               </CardContent>
@@ -534,18 +668,18 @@ export default function AdminDashboard() {
                 {selectedBooking && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
-                      <div className="bg-red-100 p-3 rounded-full">
-                        <AlertTriangle className="h-6 w-6 text-red-600" />
+                      <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
+                        <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                       </div>
                       <div>
                         <h4 className="font-medium">Booking Details</h4>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           {selectedBooking.userName} • {format(selectedBooking.date, "MMM dd, yyyy")} •{" "}
                           {selectedBooking.timeSlot}
                         </p>
                       </div>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                       <h4 className="font-medium mb-2">Rooms Booked:</h4>
                       <ul className="space-y-1">
                         {selectedBooking.roomNames.map((roomName, index) => (
@@ -553,13 +687,13 @@ export default function AdminDashboard() {
                         ))}
                       </ul>
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
                       Overriding this booking will cancel it and notify the user. This action cannot be undone.
                     </div>
                   </div>
                 )}
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsOverridingBooking(false)}>
+                  <Button variant="outline" onClick={cancelOverride}>
                     Cancel
                   </Button>
                   <Button variant="destructive" onClick={confirmOverride}>
@@ -598,19 +732,28 @@ export default function AdminDashboard() {
                   {getBookingsForDate().length > 0 ? (
                     <div className="space-y-4">
                       {getBookingsForDate().map((booking) => (
-                        <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div
+                          key={booking.id}
+                          className="flex items-center justify-between p-4 border rounded-lg dark:border-gray-700"
+                        >
                           <div>
                             <h3 className="font-medium">{booking.userName}</h3>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
                               {booking.timeSlot} • {booking.roomNames.join(", ")}
                             </p>
                           </div>
-                          <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
+                            <Button size="sm" variant="outline" onClick={() => handleEditBooking(booking.id)}>
+                              <Edit className="w-3 h-3 mr-1" />
+                              Edit
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">No bookings for this date</div>
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No bookings for this date</div>
                   )}
                 </CardContent>
               </Card>

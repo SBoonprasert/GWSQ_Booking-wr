@@ -17,10 +17,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Settings } from "lucide-react"
+import { Settings, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 // Sample user database - in a real app, this would be in your backend
 const userDatabase = {
@@ -87,12 +88,14 @@ export default function LoginPage() {
         setError("Invalid admin credentials")
       }
       setIsLoading(false)
+      setShowAdminDialog(false)
     }, 1000)
   }
 
   const handleGuestLogin = (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
     // Validate email format
     if (!guestEmail || !guestEmail.includes("@") || !guestEmail.includes(".")) {
@@ -116,6 +119,30 @@ export default function LoginPage() {
       router.push("/room-selection")
       setIsLoading(false)
     }, 1000)
+  }
+
+  const closeAdminDialog = () => {
+    setShowAdminDialog(false)
+    setAdminEmail("")
+    setAdminPassword("")
+    setError("")
+  }
+
+  const fillDemoCredentials = (type: "student" | "teacher") => {
+    if (type === "student") {
+      setEmail("john.student@university.edu")
+      setPassword("student123")
+    } else {
+      setEmail("prof.smith@university.edu")
+      setPassword("teacher123")
+    }
+    setError("")
+  }
+
+  const fillAdminCredentials = () => {
+    setAdminEmail("admin@university.edu")
+    setAdminPassword("admin123")
+    setError("")
   }
 
   return (
@@ -161,9 +188,14 @@ export default function LoginPage() {
                   required
                 />
               </div>
-              {error && <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">{error}</div>}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowAdminDialog(false)}>
+                <Button type="button" variant="outline" onClick={closeAdminDialog}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading} variant="destructive">
@@ -174,7 +206,18 @@ export default function LoginPage() {
             {/* Demo admin credentials */}
             <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
               <h4 className="font-medium text-red-900 dark:text-red-300 mb-1 text-sm">Demo Admin:</h4>
-              <div className="text-xs text-red-800 dark:text-red-200">admin@university.edu / admin123</div>
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-red-800 dark:text-red-200">admin@university.edu / admin123</div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={fillAdminCredentials}
+                  className="text-xs h-auto p-1"
+                >
+                  Fill
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -216,7 +259,10 @@ export default function LoginPage() {
                   />
                 </div>
                 {error && (
-                  <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">{error}</div>
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign In"}
@@ -229,12 +275,34 @@ export default function LoginPage() {
               {/* Demo credentials info */}
               <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Demo Credentials:</h4>
-                <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                  <div>
-                    <strong>Student:</strong> john.student@university.edu / student123
+                <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <strong>Student:</strong> john.student@university.edu / student123
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fillDemoCredentials("student")}
+                      className="text-xs h-auto p-1"
+                    >
+                      Fill
+                    </Button>
                   </div>
-                  <div>
-                    <strong>Teacher:</strong> prof.smith@university.edu / teacher123
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <strong>Teacher:</strong> prof.smith@university.edu / teacher123
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fillDemoCredentials("teacher")}
+                      className="text-xs h-auto p-1"
+                    >
+                      Fill
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -254,7 +322,10 @@ export default function LoginPage() {
                   />
                 </div>
                 {error && (
-                  <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">{error}</div>
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Continuing..." : "Continue as Guest"}
@@ -279,9 +350,9 @@ export default function LoginPage() {
         <CardFooter className="text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Need help?{" "}
-            <Link href="#" className="text-blue-600 dark:text-blue-400 hover:underline">
-              Contact Support
-            </Link>
+            <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400" asChild>
+              <Link href="mailto:support@university.edu">Contact Support</Link>
+            </Button>
           </p>
         </CardFooter>
       </Card>

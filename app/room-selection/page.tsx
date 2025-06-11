@@ -27,11 +27,13 @@ import {
   BookOpen,
   AlertCircle,
   Menu,
+  LogOut,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { RoomTimetable } from "@/components/room-timetable"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -66,6 +68,7 @@ export default function RoomSelectionPage() {
   const [timeSlotError, setTimeSlotError] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const isMobile = useIsMobile()
+  const router = useRouter()
 
   // Get user info from localStorage on component mount
   useEffect(() => {
@@ -258,6 +261,13 @@ export default function RoomSelectionPage() {
     },
   ]
 
+  const handleLogout = () => {
+    localStorage.removeItem("userType")
+    localStorage.removeItem("userTier")
+    localStorage.removeItem("userName")
+    router.push("/login")
+  }
+
   const handleRoomSelection = (roomId: string, checked: boolean) => {
     if (!userInfo) return
 
@@ -345,10 +355,15 @@ export default function RoomSelectionPage() {
 
   const confirmBooking = () => {
     // Here you would typically send the booking data to your backend
-    alert("Booking confirmed!")
+    alert("Booking confirmed! You will receive a confirmation email shortly.")
     setShowBookingDialog(false)
     setSelectedRooms([])
     setSelectedTimeSlots([])
+    setTimeSlotError(null)
+  }
+
+  const cancelBooking = () => {
+    setShowBookingDialog(false)
   }
 
   const getTotalPrice = () => {
@@ -391,7 +406,14 @@ export default function RoomSelectionPage() {
   }
 
   if (!userInfo) {
-    return <div>Loading...</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 dark:border-gray-100 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   const HeaderContent = () => (
@@ -444,7 +466,8 @@ export default function RoomSelectionPage() {
             />
           </PopoverContent>
         </Popover>
-        <Button variant="outline" className="hidden md:inline-flex">
+        <Button variant="outline" className="hidden md:inline-flex" onClick={handleLogout}>
+          <LogOut className="w-4 h-4 mr-2" />
           Logout
         </Button>
       </div>
@@ -489,13 +512,26 @@ export default function RoomSelectionPage() {
                       </span>
                     </div>
                     <nav className="flex flex-col gap-1 py-4">
-                      <Button variant="ghost" asChild className="justify-start">
+                      <Button
+                        variant="ghost"
+                        asChild
+                        className="justify-start"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
                         <Link href="/login">
                           <ArrowLeft className="w-4 h-4 mr-2" />
                           Back to Login
                         </Link>
                       </Button>
-                      <Button variant="ghost" className="justify-start">
+                      <Button
+                        variant="ghost"
+                        className="justify-start"
+                        onClick={() => {
+                          setMobileMenuOpen(false)
+                          handleLogout()
+                        }}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
                         Logout
                       </Button>
                     </nav>
@@ -594,6 +630,10 @@ export default function RoomSelectionPage() {
                       ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20"
                       : "hover:shadow-md"
                   }`}
+                  onClick={() => {
+                    const isSelected = selectedRooms.includes(room.id)
+                    handleRoomSelection(room.id, !isSelected)
+                  }}
                 >
                   <CardHeader className="p-4 md:p-6">
                     <div className="flex items-center justify-between">
@@ -602,6 +642,7 @@ export default function RoomSelectionPage() {
                         checked={selectedRooms.includes(room.id)}
                         onCheckedChange={(checked) => handleRoomSelection(room.id, checked as boolean)}
                         disabled={!selectedRooms.includes(room.id) && selectedRooms.length >= userInfo.maxRooms}
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                     <CardDescription className="flex items-center gap-4 mt-1">
@@ -886,7 +927,7 @@ export default function RoomSelectionPage() {
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowBookingDialog(false)} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={cancelBooking} className="w-full sm:w-auto">
               Cancel
             </Button>
             <Button onClick={confirmBooking} className="w-full sm:w-auto">
