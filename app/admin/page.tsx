@@ -235,8 +235,8 @@ export default function AdminDashboard() {
     const updatedRoom = {
       ...currentRoom,
       amenities: selectedAmenities,
-      id: currentRoom.id || Date.now().toString(), // Ensure ID exists
-      images: currentRoom.images || ["/placeholder.svg?height=200&width=300"], // Ensure images exist
+      id: currentRoom.id || Date.now().toString(),
+      images: currentRoom.images || ["/placeholder.svg?height=200&width=300"],
     } as Room
 
     setRooms(rooms.map((room) => (room.id === updatedRoom.id ? updatedRoom : room)))
@@ -346,15 +346,56 @@ export default function AdminDashboard() {
   }
 
   const getDaysWithBookings = () => {
-    // Create a map of dates with bookings
     const bookingDates = new Map()
-
     bookings.forEach((booking) => {
       const dateString = booking.date.toDateString()
       bookingDates.set(dateString, true)
     })
-
     return bookingDates
+  }
+
+  const generateTimetableData = () => {
+    const timeSlots = [
+      "09:00 - 10:00",
+      "10:00 - 11:00",
+      "11:00 - 12:00",
+      "12:00 - 13:00",
+      "13:00 - 14:00",
+      "14:00 - 15:00",
+      "15:00 - 16:00",
+      "16:00 - 17:00",
+    ]
+
+    return timeSlots.map((timeSlot) => ({
+      time: timeSlot,
+      bookings: rooms.map((room) => {
+        const booking = bookings.find(
+          (b) =>
+            b.roomIds.includes(room.id) &&
+            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
+            (b.timeSlot === timeSlot ||
+              (b.timeSlot === "14:00 - 16:00" && (timeSlot === "14:00 - 15:00" || timeSlot === "15:00 - 16:00"))),
+        )
+
+        if (booking) {
+          return {
+            roomId: room.id,
+            userId: booking.userId,
+            userName: booking.userName,
+            status: booking.status as any,
+            bookingId: booking.id,
+            topic: "Booked Session",
+          }
+        }
+
+        // Check room status for maintenance
+        if (room.status === "maintenance") {
+          return { roomId: room.id, status: "maintenance" as const }
+        }
+
+        return { roomId: room.id, status: "available" as const }
+      }),
+    }))
   }
 
   const RoomForm = () => (
@@ -505,13 +546,9 @@ export default function AdminDashboard() {
               <CalendarIcon className="w-4 h-4" />
               Bookings
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <TabsTrigger value="schedule" className="flex items-center gap-2">
               <CalendarIcon className="w-4 h-4" />
-              Calendar View
-            </TabsTrigger>
-            <TabsTrigger value="timetable" className="flex items-center gap-2">
-              <CalendarIcon className="w-4 h-4" />
-              Room Timetable
+              Schedule & Timetable
             </TabsTrigger>
           </TabsList>
 
@@ -723,214 +760,119 @@ export default function AdminDashboard() {
             </Dialog>
           </TabsContent>
 
-          <TabsContent value="calendar">
-            <div className="grid lg:grid-cols-3 gap-8">
+          <TabsContent value="schedule" className="space-y-6">
+            <div className="grid lg:grid-cols-4 gap-6">
+              {/* Calendar Section */}
               <Card className="lg:col-span-1">
                 <CardHeader>
                   <CardTitle>Calendar</CardTitle>
-                  <CardDescription>Select a date to view bookings</CardDescription>
+                  <CardDescription>Select a date to view room schedule</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="rounded-md border"
-                    modifiers={{
-                      booked: (date) => getDaysWithBookings().has(date.toDateString()),
-                    }}
-                    modifiersStyles={{
-                      booked: {
-                        textDecoration: "underline",
-                        position: "relative",
-                      },
-                    }}
-                    components={{
-                      DayContent: ({ date, ...props }) => (
-                        <div className="relative">
-                          <div {...props}>{date.getDate()}</div>
-                          {getDaysWithBookings().has(date.toDateString()) && (
-                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-red-500 rounded-full" />
-                          )}
-                        </div>
-                      ),
-                    }}
-                  />
+                  <style jsx>{`
+                    .calendar-with-dots .rdp-day_button {
+                      position: relative;
+                    }
+                    .calendar-with-dots .has-booking::after {
+                      content: '';
+                      position: absolute;
+                      bottom: 2px;
+                      left: 50%;
+                      transform: translateX(-50%);
+                      width: 4px;
+                      height: 4px;
+                      background-color: #ef4444;
+                      border-radius: 50%;
+                    }
+                  `}</style>
+                  <div className="calendar-with-dots">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      className="rounded-md border"
+                      modifiers={{
+                        booked: (date) => getDaysWithBookings().has(date.toDateString()),
+                      }}
+                      modifiersClassNames={{
+                        booked: "has-booking",
+                      }}
+                    />
+                  </div>
+
+                  {/* Legend */}
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span>Days with bookings</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="lg:col-span-2">
+              {/* Bookings Summary */}
+              <Card className="lg:col-span-1">
                 <CardHeader>
-                  <CardTitle>
-                    Bookings for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Selected Date"}
-                  </CardTitle>
-                  <CardDescription>All room bookings for this date</CardDescription>
+                  <CardTitle>{selectedDate ? format(selectedDate, "MMM d") : "Today"}'s Bookings</CardTitle>
+                  <CardDescription>
+                    {getBookingsForDate().length} booking{getBookingsForDate().length !== 1 ? "s" : ""} scheduled
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {getBookingsForDate().length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {getBookingsForDate().map((booking) => (
                         <div
                           key={booking.id}
-                          className="flex items-center justify-between p-4 border rounded-lg dark:border-gray-700"
+                          className="p-3 border rounded-lg dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
                         >
-                          <div>
-                            <h3 className="font-medium">{booking.userName}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {booking.timeSlot} • {booking.roomNames.join(", ")}
-                            </p>
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-medium text-sm">{booking.userName}</h4>
+                            <Badge className={getStatusColor(booking.status)} variant="secondary">
+                              {booking.status}
+                            </Badge>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">{booking.timeSlot}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500">{booking.roomNames.join(", ")}</p>
+                          <div className="flex gap-1 mt-2">
                             <Button size="sm" variant="outline" onClick={() => handleEditBooking(booking.id)}>
-                              <Edit className="w-3 h-3 mr-1" />
-                              Edit
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleOverrideBooking(booking)}>
+                              <X className="w-3 h-3" />
                             </Button>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">No bookings for this date</div>
+                    <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                      <CalendarIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No bookings for this date</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
+
+              {/* Room Timetable */}
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Room Timetable</CardTitle>
+                    <CardDescription>
+                      Room availability for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "today"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <RoomTimetable
+                      date={selectedDate || new Date()}
+                      rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
+                      timeSlots={generateTimetableData()}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          </TabsContent>
-          <TabsContent value="timetable">
-            <Card>
-              <CardHeader>
-                <CardTitle>Room Timetable</CardTitle>
-                <CardDescription>
-                  View and manage room availability for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "today"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RoomTimetable
-                  date={selectedDate || new Date()}
-                  rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
-                  timeSlots={[
-                    {
-                      time: "09:00 - 10:00",
-                      bookings: rooms.map((room) => {
-                        const booking = bookings.find(
-                          (b) =>
-                            b.roomIds.includes(room.id) &&
-                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
-                            b.timeSlot === "09:00 - 10:00",
-                        )
-                        return booking
-                          ? {
-                              roomId: room.id,
-                              userId: booking.userId,
-                              userName: booking.userName,
-                              status: booking.status as any,
-                              bookingId: booking.id,
-                              topic: "Booked Session",
-                            }
-                          : { roomId: room.id, status: "available" as const }
-                      }),
-                    },
-                    {
-                      time: "10:00 - 11:00",
-                      bookings: rooms.map((room) => {
-                        const booking = bookings.find(
-                          (b) =>
-                            b.roomIds.includes(room.id) &&
-                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
-                            b.timeSlot === "10:00 - 11:00",
-                        )
-                        return booking
-                          ? {
-                              roomId: room.id,
-                              userId: booking.userId,
-                              userName: booking.userName,
-                              status: booking.status as any,
-                              bookingId: booking.id,
-                              topic: "Booked Session",
-                            }
-                          : { roomId: room.id, status: "available" as const }
-                      }),
-                    },
-                    {
-                      time: "11:00 - 12:00",
-                      bookings: rooms.map((room) => {
-                        const booking = bookings.find(
-                          (b) =>
-                            b.roomIds.includes(room.id) &&
-                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
-                            b.timeSlot === "11:00 - 12:00",
-                        )
-                        return booking
-                          ? {
-                              roomId: room.id,
-                              userId: booking.userId,
-                              userName: booking.userName,
-                              status: booking.status as any,
-                              bookingId: booking.id,
-                              topic: "Booked Session",
-                            }
-                          : { roomId: room.id, status: "available" as const }
-                      }),
-                    },
-                    {
-                      time: "12:00 - 13:00",
-                      bookings: rooms.map((room) => ({ roomId: room.id, status: "available" as const })),
-                    },
-                    {
-                      time: "13:00 - 14:00",
-                      bookings: rooms.map((room) => ({ roomId: room.id, status: "available" as const })),
-                    },
-                    {
-                      time: "14:00 - 15:00",
-                      bookings: rooms.map((room) => {
-                        const booking = bookings.find(
-                          (b) =>
-                            b.roomIds.includes(room.id) &&
-                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
-                            b.timeSlot === "14:00 - 16:00",
-                        )
-                        return booking
-                          ? {
-                              roomId: room.id,
-                              userId: booking.userId,
-                              userName: booking.userName,
-                              status: booking.status as any,
-                              bookingId: booking.id,
-                              topic: "Booked Session",
-                            }
-                          : { roomId: room.id, status: "available" as const }
-                      }),
-                    },
-                    {
-                      time: "15:00 - 16:00",
-                      bookings: rooms.map((room) => {
-                        const booking = bookings.find(
-                          (b) =>
-                            b.roomIds.includes(room.id) &&
-                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
-                            b.timeSlot === "14:00 - 16:00",
-                        )
-                        return booking
-                          ? {
-                              roomId: room.id,
-                              userId: booking.userId,
-                              userName: booking.userName,
-                              status: booking.status as any,
-                              bookingId: booking.id,
-                              topic: "Booked Session",
-                            }
-                          : { roomId: room.id, status: "available" as const }
-                      }),
-                    },
-                    {
-                      time: "16:00 - 17:00",
-                      bookings: rooms.map((room) => ({ roomId: room.id, status: "available" as const })),
-                    },
-                  ]}
-                />
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
