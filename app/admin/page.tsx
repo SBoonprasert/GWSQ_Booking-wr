@@ -43,6 +43,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { RoomTimetable } from "@/components/room-timetable"
 
 interface Room {
   id: string
@@ -234,9 +235,11 @@ export default function AdminDashboard() {
     const updatedRoom = {
       ...currentRoom,
       amenities: selectedAmenities,
+      id: currentRoom.id || Date.now().toString(), // Ensure ID exists
+      images: currentRoom.images || ["/placeholder.svg?height=200&width=300"], // Ensure images exist
     } as Room
 
-    setRooms(rooms.map((room) => (room.id === currentRoom.id ? updatedRoom : room)))
+    setRooms(rooms.map((room) => (room.id === updatedRoom.id ? updatedRoom : room)))
     resetRoomForm()
     setIsEditingRoom(false)
   }
@@ -340,6 +343,18 @@ export default function AdminDashboard() {
   const getBookingsForDate = () => {
     if (!selectedDate) return []
     return bookings.filter((booking) => booking.date.toDateString() === selectedDate.toDateString())
+  }
+
+  const getDaysWithBookings = () => {
+    // Create a map of dates with bookings
+    const bookingDates = new Map()
+
+    bookings.forEach((booking) => {
+      const dateString = booking.date.toDateString()
+      bookingDates.set(dateString, true)
+    })
+
+    return bookingDates
   }
 
   const RoomForm = () => (
@@ -493,6 +508,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="calendar" className="flex items-center gap-2">
               <CalendarIcon className="w-4 h-4" />
               Calendar View
+            </TabsTrigger>
+            <TabsTrigger value="timetable" className="flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4" />
+              Room Timetable
             </TabsTrigger>
           </TabsList>
 
@@ -717,6 +736,25 @@ export default function AdminDashboard() {
                     selected={selectedDate}
                     onSelect={setSelectedDate}
                     className="rounded-md border"
+                    modifiers={{
+                      booked: (date) => getDaysWithBookings().has(date.toDateString()),
+                    }}
+                    modifiersStyles={{
+                      booked: {
+                        textDecoration: "underline",
+                        position: "relative",
+                      },
+                    }}
+                    components={{
+                      DayContent: ({ date, ...props }) => (
+                        <div className="relative">
+                          <div {...props}>{date.getDate()}</div>
+                          {getDaysWithBookings().has(date.toDateString()) && (
+                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-red-500 rounded-full" />
+                          )}
+                        </div>
+                      ),
+                    }}
                   />
                 </CardContent>
               </Card>
@@ -758,6 +796,141 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+          <TabsContent value="timetable">
+            <Card>
+              <CardHeader>
+                <CardTitle>Room Timetable</CardTitle>
+                <CardDescription>
+                  View and manage room availability for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "today"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RoomTimetable
+                  date={selectedDate || new Date()}
+                  rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
+                  timeSlots={[
+                    {
+                      time: "09:00 - 10:00",
+                      bookings: rooms.map((room) => {
+                        const booking = bookings.find(
+                          (b) =>
+                            b.roomIds.includes(room.id) &&
+                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
+                            b.timeSlot === "09:00 - 10:00",
+                        )
+                        return booking
+                          ? {
+                              roomId: room.id,
+                              userId: booking.userId,
+                              userName: booking.userName,
+                              status: booking.status as any,
+                              bookingId: booking.id,
+                              topic: "Booked Session",
+                            }
+                          : { roomId: room.id, status: "available" as const }
+                      }),
+                    },
+                    {
+                      time: "10:00 - 11:00",
+                      bookings: rooms.map((room) => {
+                        const booking = bookings.find(
+                          (b) =>
+                            b.roomIds.includes(room.id) &&
+                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
+                            b.timeSlot === "10:00 - 11:00",
+                        )
+                        return booking
+                          ? {
+                              roomId: room.id,
+                              userId: booking.userId,
+                              userName: booking.userName,
+                              status: booking.status as any,
+                              bookingId: booking.id,
+                              topic: "Booked Session",
+                            }
+                          : { roomId: room.id, status: "available" as const }
+                      }),
+                    },
+                    {
+                      time: "11:00 - 12:00",
+                      bookings: rooms.map((room) => {
+                        const booking = bookings.find(
+                          (b) =>
+                            b.roomIds.includes(room.id) &&
+                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
+                            b.timeSlot === "11:00 - 12:00",
+                        )
+                        return booking
+                          ? {
+                              roomId: room.id,
+                              userId: booking.userId,
+                              userName: booking.userName,
+                              status: booking.status as any,
+                              bookingId: booking.id,
+                              topic: "Booked Session",
+                            }
+                          : { roomId: room.id, status: "available" as const }
+                      }),
+                    },
+                    {
+                      time: "12:00 - 13:00",
+                      bookings: rooms.map((room) => ({ roomId: room.id, status: "available" as const })),
+                    },
+                    {
+                      time: "13:00 - 14:00",
+                      bookings: rooms.map((room) => ({ roomId: room.id, status: "available" as const })),
+                    },
+                    {
+                      time: "14:00 - 15:00",
+                      bookings: rooms.map((room) => {
+                        const booking = bookings.find(
+                          (b) =>
+                            b.roomIds.includes(room.id) &&
+                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
+                            b.timeSlot === "14:00 - 16:00",
+                        )
+                        return booking
+                          ? {
+                              roomId: room.id,
+                              userId: booking.userId,
+                              userName: booking.userName,
+                              status: booking.status as any,
+                              bookingId: booking.id,
+                              topic: "Booked Session",
+                            }
+                          : { roomId: room.id, status: "available" as const }
+                      }),
+                    },
+                    {
+                      time: "15:00 - 16:00",
+                      bookings: rooms.map((room) => {
+                        const booking = bookings.find(
+                          (b) =>
+                            b.roomIds.includes(room.id) &&
+                            b.date.toDateString() === (selectedDate || new Date()).toDateString() &&
+                            b.timeSlot === "14:00 - 16:00",
+                        )
+                        return booking
+                          ? {
+                              roomId: room.id,
+                              userId: booking.userId,
+                              userName: booking.userName,
+                              status: booking.status as any,
+                              bookingId: booking.id,
+                              topic: "Booked Session",
+                            }
+                          : { roomId: room.id, status: "available" as const }
+                      }),
+                    },
+                    {
+                      time: "16:00 - 17:00",
+                      bookings: rooms.map((room) => ({ roomId: room.id, status: "available" as const })),
+                    },
+                  ]}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
