@@ -845,7 +845,7 @@ export default function AdminDashboard() {
             {/* Room Cards with Scrollable Container */}
             <div className="relative">
               {filteredRooms.length > 0 ? (
-                <div className="max-h-[600px] overflow-y-auto pr-2 space-y-4">
+                <div className="max-h-[70vh] overflow-y-auto pr-2 space-y-4">
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {filteredRooms.map((room) => (
                       <Card key={room.id} className="h-fit">
@@ -863,7 +863,7 @@ export default function AdminDashboard() {
                             <img
                               src={room.images[0] || "/placeholder.svg"}
                               alt={room.name}
-                              className="w-full h-32 object-cover rounded-md"
+                              className="w-full h-56 object-cover rounded-md"
                             />
                             <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{room.description}</p>
                             <div className="flex flex-wrap gap-1">

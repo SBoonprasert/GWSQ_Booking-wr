@@ -90,24 +90,24 @@ export default function RoomSelectionPage() {
       id: "room1",
       name: "Meeting Room A",
       capacity: 10,
-      features: ["Whiteboard", "Projector", "Conference Call"],
-      image: "/placeholder.svg?height=200&width=300",
+      features: ["TV", "Sound System", "Wi-Fi"],
+      image: "/room_img/IMG_8920.png",
       price: 50,
     },
     {
       id: "room2",
       name: "Conference Hall B",
-      capacity: 50,
-      features: ["Sound System", "Stage", "Video Conferencing"],
-      image: "/placeholder.svg?height=200&width=300",
+      capacity: 10,
+      features: ["TV", "Sound System", "Wi-Fi", "Conference table"],
+      image: "/room_img/IMG_8923.png",
       price: 100,
     },
     {
       id: "room3",
       name: "Training Room C",
-      capacity: 20,
-      features: ["Computers", "Interactive Whiteboard"],
-      image: "/placeholder.svg?height=200&width=300",
+      capacity: 10,
+      features: ["TV", "Sound System", "Wi-Fi", "Conference table"],
+      image: "/room_img/IMG_8923.png",
       price: 75,
     },
   ]
@@ -661,7 +661,7 @@ export default function RoomSelectionPage() {
                     <img
                       src={room.image || "/placeholder.svg"}
                       alt={room.name}
-                      className="w-full h-24 md:h-32 object-cover rounded-md mb-4"
+                      className="w-full h-30 md:h-56 object-cover rounded-md mb-4"
                     />
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm md:text-base">Features:</h4>
