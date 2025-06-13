@@ -30,10 +30,10 @@ const userDatabase = {
   "mary.student@university.edu": { password: "student123", tier: "student", name: "Mary Student" },
   "alex.student@university.edu": { password: "student123", tier: "student", name: "Alex Student" },
 
-  // Teachers
-  "prof.smith@university.edu": { password: "teacher123", tier: "teacher", name: "Prof. Smith" },
-  "dr.johnson@university.edu": { password: "teacher123", tier: "teacher", name: "Dr. Johnson" },
-  "prof.williams@university.edu": { password: "teacher123", tier: "teacher", name: "Prof. Williams" },
+  // Faculty and Staff
+  "prof.smith@university.edu": { password: "teacher123", tier: "faculty", name: "Prof. Smith" },
+  "dr.johnson@university.edu": { password: "teacher123", tier: "faculty", name: "Dr. Johnson" },
+  "prof.williams@university.edu": { password: "teacher123", tier: "faculty", name: "Prof. Williams" },
 
   // Admin
   "admin@university.edu": { password: "admin123", tier: "admin", name: "Administrator" },
@@ -59,7 +59,11 @@ export default function LoginPage() {
     setTimeout(() => {
       // User login - automatically determine tier
       const user = userDatabase[email as keyof typeof userDatabase]
-      if (user && user.password === password && (user.tier === "student" || user.tier === "teacher")) {
+      if (
+        user &&
+        user.password === password &&
+        (user.tier === "student" || user.tier === "teacher" || user.tier === "faculty")
+      ) {
         localStorage.setItem("userType", "user")
         localStorage.setItem("userTier", user.tier)
         localStorage.setItem("userName", user.name)
@@ -128,7 +132,7 @@ export default function LoginPage() {
     setError("")
   }
 
-  const fillDemoCredentials = (type: "student" | "teacher") => {
+  const fillDemoCredentials = (type: "student" | "faculty") => {
     if (type === "student") {
       setEmail("john.student@university.edu")
       setPassword("student123")
@@ -292,13 +296,13 @@ export default function LoginPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <strong>Teacher:</strong> prof.smith@university.edu / teacher123
+                      <strong>Faculty & Staff:</strong> prof.smith@university.edu / teacher123
                     </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => fillDemoCredentials("teacher")}
+                      onClick={() => fillDemoCredentials("faculty")}
                       className="text-xs h-auto p-1"
                     >
                       Fill

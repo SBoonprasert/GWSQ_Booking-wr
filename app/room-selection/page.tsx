@@ -49,7 +49,7 @@ interface Room {
 
 interface UserInfo {
   name: string
-  tier: "student" | "teacher" | "guest"
+  tier: "student" | "teacher" | "guest" | "faculty"
   maxRooms: number
   maxHours: number
 }
@@ -72,15 +72,15 @@ export default function RoomSelectionPage() {
 
   // Get user info from localStorage on component mount
   useEffect(() => {
-    const userTier = localStorage.getItem("userTier") as "student" | "teacher" | "guest" | null
+    const userTier = localStorage.getItem("userTier") as "student" | "faculty" | "guest" | null
     const userName = localStorage.getItem("userName") || "User"
 
     if (userTier) {
       setUserInfo({
         name: userName,
         tier: userTier,
-        maxRooms: userTier === "student" ? 1 : userTier === "teacher" ? 3 : 2, // Guest can book 2 rooms
-        maxHours: userTier === "student" ? 2 : userTier === "teacher" ? 4 : 3, // Student: 2h, Teacher: 4h, Guest: 3h
+        maxRooms: userTier === "student" ? 1 : userTier === "faculty" ? 3 : 2, // Guest can book 2 rooms
+        maxHours: userTier === "student" ? 2 : userTier === "faculty" ? 4 : 3, // Student: 2h, Faculty: 4h, Guest: 3h
       })
     }
   }, [])
@@ -276,7 +276,7 @@ export default function RoomSelectionPage() {
       if (selectedRooms.length >= userInfo.maxRooms) {
         alert(
           `${
-            userInfo.tier === "student" ? "Students" : userInfo.tier === "teacher" ? "Teachers" : "Guests"
+            userInfo.tier === "student" ? "Students" : userInfo.tier === "faculty" ? "Faculty & Staff" : "Guests"
           } can only book ${userInfo.maxRooms} room${userInfo.maxRooms > 1 ? "s" : ""} at a time.`,
         )
         return
@@ -319,7 +319,7 @@ export default function RoomSelectionPage() {
     if (selectedTimeSlots.length + 1 > userInfo.maxHours) {
       setTimeSlotError(
         `${
-          userInfo.tier === "student" ? "Students" : userInfo.tier === "teacher" ? "Teachers" : "Guests"
+          userInfo.tier === "student" ? "Students" : userInfo.tier === "faculty" ? "Faculty & Staff" : "Guests"
         } can only book for up to ${userInfo.maxHours} hour${userInfo.maxHours > 1 ? "s" : ""} at a time.`,
       )
       return
@@ -367,8 +367,8 @@ export default function RoomSelectionPage() {
   }
 
   const getTotalPrice = () => {
-    // Free for students and teachers
-    if (userInfo?.tier === "student" || userInfo?.tier === "teacher") {
+    // Free for students and faculty/staff
+    if (userInfo?.tier === "student" || userInfo?.tier === "faculty") {
       return 0
     }
 
@@ -379,11 +379,11 @@ export default function RoomSelectionPage() {
     }, 0)
   }
 
-  const getTierColor = (tier: "student" | "teacher" | "guest") => {
+  const getTierColor = (tier: "student" | "faculty" | "guest") => {
     switch (tier) {
       case "student":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-      case "teacher":
+      case "faculty":
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
       case "guest":
         return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
@@ -392,11 +392,11 @@ export default function RoomSelectionPage() {
     }
   }
 
-  const getTierIcon = (tier: "student" | "teacher" | "guest") => {
+  const getTierIcon = (tier: "student" | "faculty" | "guest") => {
     switch (tier) {
       case "student":
         return <GraduationCap className="w-4 h-4 mr-1" />
-      case "teacher":
+      case "faculty":
         return <BookOpen className="w-4 h-4 mr-1" />
       case "guest":
         return <CreditCard className="w-4 h-4 mr-1" />
@@ -537,7 +537,7 @@ export default function RoomSelectionPage() {
                     </nav>
                     <div className="mt-auto py-4 border-t">
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {userInfo.tier === "student" || userInfo.tier === "teacher"
+                        {userInfo.tier === "student" || userInfo.tier === "faculty"
                           ? "University members book for free!"
                           : "Standard rates apply for guests."}
                       </p>
@@ -589,7 +589,7 @@ export default function RoomSelectionPage() {
                     {userInfo.maxRooms} room{userInfo.maxRooms > 1 ? "s" : ""}
                   </strong>{" "}
                   for up to <strong>{userInfo.maxHours} hours</strong> at a time.
-                  {userInfo.tier === "student" || userInfo.tier === "teacher" ? (
+                  {userInfo.tier === "student" || userInfo.tier === "faculty" ? (
                     <span className="text-green-600 dark:text-green-400 font-medium">
                       {" "}
                       University members book for free!
@@ -769,10 +769,14 @@ export default function RoomSelectionPage() {
               </div>
 
               <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                <p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   <strong>Note:</strong>{" "}
-                  {userInfo.tier === "student" ? "Students" : userInfo.tier === "teacher" ? "Teachers" : "Guests"} can
-                  book for up to {userInfo.maxHours} consecutive hours.
+                  {userInfo.tier === "student"
+                    ? "Students"
+                    : userInfo.tier === "faculty"
+                      ? "Faculty & Staff"
+                      : "Guests"}{" "}
+                  can book for up to {userInfo.maxHours} consecutive hours.
                 </p>
                 {selectedTimeSlots.length > 0 && (
                   <p className="mt-2">
